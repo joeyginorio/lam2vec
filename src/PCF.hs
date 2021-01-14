@@ -19,6 +19,5 @@
     - Use a transformer stack: either + reader
 
 NOTE: Try and use combinators to design these components. Avoid explicit recursion
-      where possible.
+      where possible. 
 -}
-

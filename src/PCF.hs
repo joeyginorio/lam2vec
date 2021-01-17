@@ -58,7 +58,8 @@ data Error = EVar Id
            | EIf1 Term
            | EIf2 Term Term
            | EProd Term
-           | EFun Term Term
+           | EFun1 Term Term
+           | EFun2 Term
            deriving (Show)
 
 -- Typecheck type = Reader + Either monad stack
@@ -110,7 +111,8 @@ tyCheck (TmApp tm1 tm2)    = do ty1 <- tyCheck tm1
                                 lift $ case ty1 of
                                          (TyFun ty11 ty12) -> if ty11 == ty2
                                                                 then Right ty12
-                                                                else Left $ EFun tm1 tm2
+                                                                else Left $ EFun1 tm1 tm2 -- tm2 not valid input to tm1
+                                         _                 -> Left $ EFun2 tm1            -- tm1 must be a function
 
 
 find :: Id -> TcType

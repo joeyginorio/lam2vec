@@ -51,7 +51,9 @@ type Binding = (Id, Type)         -- e.g. x :: Bool => (x,Bool)
 type Context = [Binding]
 
 
-{- ================================= Syntax ================================= -}
+{- ================================ Semantics =============================== -}
+
+--                                {Typechecker}
 
 data Error = EVar  Id         -- Variable not in context
            | ELet  Term       -- First term isn't Unit type
@@ -78,7 +80,7 @@ tyCheck (TmVar x)          = do ctx <- ask
 tyCheck (TmProd tm1 tm2)   = do ty1 <- tyCheck tm1
                                 ty2 <- tyCheck tm2
                                 return $ TyProd ty1 ty2
-tyCheck (TmFun x ty1 tm)   = do ty2 <- tyCheck tm
+tyCheck (TmFun x ty1 tm)   = do ty2 <- local ((x,ty1):) $ tyCheck tm
                                 return $ TyFun ty1 ty2
 tyCheck (TmLet tm1 tm2)    = do ty1 <- tyCheck tm1
                                 lift $ if ty1 == TyUnit
@@ -120,4 +122,35 @@ find x = do ctx <- ask
                      Nothing -> Left $ EVar x
                      Just ty -> Right ty
 
+
+--                                {Interpreter}
+
+-- Keeps track of which variables are bound to which terms.
+type Environment = [(Id,Term)]
+
+-- ETerm := Evaluated Term
+-- Interpretation as a reader + maybe monad stack.
+-- Reader monad handles environment-passing.
+-- Maybe monad handles when environment lookup fails.
+type ETerm = ReaderT Environment Maybe Term
+
+eval :: Term -> ETerm
+eval (TmVar x)                   = do env <- ask
+                                      lift $ lookup x env
+eval (TmLet TmUnit tm2)          = return tm2
+eval (TmLet tm1 tm2)             = do tm1' <- eval tm1
+                                      eval (TmLet tm1' tm2)
+eval (TmIf TmTrue tm2 _)         = eval tm2
+eval (TmIf TmFalse _ tm3)        = eval tm3
+eval (TmIf tm1 tm2 tm3)          = do tm1' <- eval tm1
+                                      eval (TmIf tm1' tm2 tm3)
+eval (TmFst (TmProd tm1 _))      = eval tm1
+eval (TmFst tm)                  = do tm' <- eval tm
+                                      eval tm'
+eval (TmSnd (TmProd _ tm2))       = eval tm2
+eval (TmSnd tm)                   = do tm' <- eval tm
+                                       eval tm'
+-- eval (TmApp (TmFun x ty tm1) tm2) = eval $ local ((x,tm2):) ask
+
+-- eval tm        = return tm
 

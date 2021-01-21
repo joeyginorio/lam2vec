@@ -164,9 +164,10 @@ aconv x y (TmSnd tm)       = TmSnd (aconv x y tm)
 aconv x y (TmApp tm1 tm2)  = TmApp (aconv x y tm1) (aconv x y tm2)
 
 -- Substituted term
+-- Reader monad carries around fresh identifiers
 type STerm = Reader [Id] Term
 
--- Capture-avoiding sub stitution
+-- Capture-avoiding substitution
 -- s[x/t] means a term s where all x are replaced with t
 subst :: Id -> Term -> Term -> STerm
 subst x t (TmUnit)           = return TmUnit
@@ -182,6 +183,8 @@ subst x t s@(TmFun y ty tm)  | x == y           = return $ TmFun y ty tm
                                                      let z  = head ids
                                                      let s' = aconv y z s
                                                      local tail (subst x t s')
+                             | otherwise        = do tm' <- subst x t tm
+                                                     return $ TmFun y ty tm'
 subst x t (TmLet tm1 tm2)    = do tm1' <- subst x t tm1
                                   tm2' <- subst x t tm2
                                   return $ TmLet tm1' tm2'
@@ -197,4 +200,21 @@ subst x t (TmApp tm1 tm2)    = do tm1' <- subst x t tm1
                                   tm2' <- subst x t tm2
                                   return $ TmApp tm1' tm2'
 
--- eval :: Term -> ETerm
+eval :: Term -> STerm
+eval (TmLet TmUnit tm)           = eval tm
+eval (TmLet tm1 tm2)             = do tm1' <- eval tm1
+                                      eval $ TmLet tm1' tm2
+eval (TmIf TmTrue tm2 _)         = eval tm2
+eval (TmIf TmFalse _ tm3)        = eval tm3
+eval (TmIf tm1 tm2 tm3)          = do tm1' <- eval tm1
+                                      eval $ TmIf tm1 tm2 tm3
+eval (TmFst (TmProd tm1 tm2))    = eval tm1
+eval (TmFst tm)                  = do tm' <- eval tm
+                                      eval $ TmFst tm'
+eval (TmSnd (TmProd tm1 tm2))    = eval tm2
+eval (TmSnd tm)                  = do tm' <- eval tm
+                                      eval $ TmSnd tm'
+eval (TmApp (TmFun x _ tm1) tm2) = subst x tm2 tm1
+eval (TmApp tm1 tm2)             = do tm1' <- eval tm1
+                                      eval $ TmApp tm1' tm2
+eval tm = return tm

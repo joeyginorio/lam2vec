@@ -20,61 +20,56 @@ NOTE: Try and use combinators to design these components. Avoid explicit recursi
       where possible.
 -}
 
-{-# LANGUAGE DeriveTraversable #-}
-{-# LANGUAGE DeriveFoldable #-}
-{-# LANGUAGE DeriveFunctor #-}
-
+import Data.Set (Set, empty, delete, insert)
 import Control.Monad
 import Control.Monad.Trans
 import Control.Monad.Trans.Reader
 
 {- ================================= Syntax ================================= -}
 
-type Id = String
-
-data Term a = TmUnit                            -- Unit              {Intro.}
-            | TmTrue                            -- True
-            | TmFalse                           -- False
-            | TmVar  a                          -- Variables
-            | TmProd (Term a) (Term a)          -- Products
-            | TmFun  a Type (Term a)            -- Functions
-            | TmLet  (Term a) (Term a)          -- Let statements    {Elim.}
-            | TmIf   (Term a) (Term a) (Term a) -- If statements
-            | TmFst  (Term a)                   -- First projection
-            | TmSnd  (Term a)                   -- Second projection
-            | TmApp  (Term a) (Term a)          -- Application
-            deriving (Show, Eq, Functor, Foldable, Traversable)
-
-data Type = TyUnit                -- Unit
-          | TyBool                -- Booleans
-          | TyProd Type Type      -- Products
-          | TyFun  Type Type      -- Functions
+data Term = TmUnit                          -- Unit              {Intro.}
+          | TmTrue                          -- True
+          | TmFalse                         -- False
+          | TmVar  Id                       -- Variables
+          | TmProd Term Term                -- Products
+          | TmFun  Id Type Term             -- Functions
+          | TmLet  Term Term                -- Let statements    {Elim.}
+          | TmIf   Term Term Term           -- If statements
+          | TmFst  Term                     -- First projection
+          | TmSnd  Term                     -- Second projection
+          | TmApp  Term Term                -- Application
           deriving (Show, Eq)
 
-type Binding a = (a, Type)        -- e.g. x :: Bool => (x,Bool)
-type Context a = [Binding a]
+data Type = TyUnit                          -- Unit
+          | TyBool                          -- Booleans
+          | TyProd Type Type                -- Products
+          | TyFun  Type Type                -- Functions
+          deriving (Show, Eq)
+
+type Binding = (Id, Type)                    -- e.g. x :: Bool => (x,Bool)
+type Context = [Binding]
 
 
 {- ================================ Semantics =============================== -}
 
 --                                {Typechecker}
 
-data Error a = EVar  a                 -- Variable not in context
-             | ELet  (Term a)          -- First term isn't Unit type
-             | EIf1  (Term a)          -- First term isn't Bool type
-             | EIf2  (Term a) (Term a) -- Second and third term aren't the same type
-             | EProd (Term a)          -- Term isn't product type
-             | EFun1 (Term a) (Term a) -- Second term not valid iput to first term
-             | EFun2 (Term a)          -- First term isn't a funtion
-             deriving (Show)
+data Error = EVar  Id         -- Variable not in context
+           | ELet  Term       -- First term isn't Unit type
+           | EIf1  Term       -- First term isn't Bool type
+           | EIf2  Term Term  -- Second and third term aren't the same type
+           | EProd Term       -- Term isn't product type
+           | EFun1 Term Term  -- Second term not valid iput to first term
+           | EFun2 Term       -- First term isn't a funtion
+           deriving (Show)
 
 -- Typecheck type = Reader + Either monad stack
 -- (i) Reader passes around the context
 -- (ii) Either passes around informative typecheck errors
 
-type TcType a = ReaderT (Context a) (Either (Error a)) Type
+type TcType = ReaderT Context (Either Error) Type
 
-tyCheck :: Eq a => Term a -> TcType a
+tyCheck :: Term -> TcType
 tyCheck (TmUnit)           = return TyUnit
 tyCheck (TmTrue)           = return TyBool
 tyCheck (TmFalse)          = return TyBool
@@ -120,7 +115,7 @@ tyCheck (TmApp tm1 tm2)    = do ty1 <- tyCheck tm1
                                            | otherwise   -> Left $ EFun1 tm1 tm2
                                          _                 -> Left $ EFun2 tm1
 
-find :: Eq a => a -> TcType a
+find :: Id -> TcType
 find x = do ctx <- ask
             lift $ case lookup x ctx of
                      Nothing -> Left $ EVar x
@@ -129,5 +124,29 @@ find x = do ctx <- ask
 
 --                                {Interpreter}
 
--- Keeps track of which variables are bound to which terms.
 
+
+-- Identifiers are strings
+type Id = String
+
+-- Infinite list of fresh variable names
+ids :: [Id]
+ids = zipWith (:) cs nums
+      where cs   = repeat '#'
+            nums = map show [0..]
+
+-- -- Fresh variables in a term
+-- fvs :: Id -> Term Id -> Set Id
+-- fvs x tm = foldr f empty tm
+--            where f (TmFun y _ _) a = delete y a
+--                  f y           a = insert y 
+-- Capture-avoiding substitution
+-- subst :: Id -> Term Id -> Term Id
+
+
+-- subst :: Term -> ETerm
+
+-- Evaluated terms (specialized to identifiers)
+type ETerm = Reader [Id] Term
+
+-- eval :: Term -> ETerm

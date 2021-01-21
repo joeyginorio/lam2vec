@@ -9,7 +9,6 @@ import Control.Monad
 import Control.Monad.Trans
 import Control.Monad.Trans.Reader
 
-
 {- ================================= Syntax ================================= -}
 
 data Term = TmUnit                          -- Unit              {Intro.}
@@ -118,7 +117,7 @@ ids = zipWith (:) cs nums
       where cs   = repeat '#'
             nums = map show [0..]
 
--- -- Fresh variables in a term
+-- Fresh variables in a term
 fvs :: Term -> Set Id
 fvs (TmUnit)           = empty
 fvs (TmTrue)           = empty

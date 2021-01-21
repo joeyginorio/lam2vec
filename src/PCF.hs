@@ -2,28 +2,13 @@
    ======
    Defines syntax and semantics of PCF. -}
 
-{- TODO:
-
-(i) Define Term datatype
-    - Pretty print
-
-(ii) Define Type datatype
-    - Pretty print
-
-(iii) Define typechecker
-    - Use a transformer stack: either + reader
-
-(iv) Define evaluator
-    - Use a transformer stack: either + reader
-
-NOTE: Try and use combinators to design these components. Avoid explicit recursion
-      where possible.
--}
+module PCF where
 
 import Data.Set (Set, empty, delete, insert, union, member)
 import Control.Monad
 import Control.Monad.Trans
 import Control.Monad.Trans.Reader
+
 
 {- ================================= Syntax ================================= -}
 
@@ -200,6 +185,7 @@ subst x t (TmApp tm1 tm2)    = do tm1' <- subst x t tm1
                                   tm2' <- subst x t tm2
                                   return $ TmApp tm1' tm2'
 
+-- The actual interpreter, using call-by-name evaluation order
 eval :: Term -> STerm
 eval (TmLet TmUnit tm)           = eval tm
 eval (TmLet tm1 tm2)             = do tm1' <- eval tm1

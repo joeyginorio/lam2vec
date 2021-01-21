@@ -20,7 +20,7 @@ NOTE: Try and use combinators to design these components. Avoid explicit recursi
       where possible.
 -}
 
-import Data.Set (Set, empty, delete, insert)
+import Data.Set (Set, empty, delete, insert, union, member)
 import Control.Monad
 import Control.Monad.Trans
 import Control.Monad.Trans.Reader
@@ -124,8 +124,6 @@ find x = do ctx <- ask
 
 --                                {Interpreter}
 
-
-
 -- Identifiers are strings
 type Id = String
 
@@ -136,17 +134,67 @@ ids = zipWith (:) cs nums
             nums = map show [0..]
 
 -- -- Fresh variables in a term
--- fvs :: Id -> Term Id -> Set Id
--- fvs x tm = foldr f empty tm
---            where f (TmFun y _ _) a = delete y a
---                  f y           a = insert y 
--- Capture-avoiding substitution
--- subst :: Id -> Term Id -> Term Id
+fvs :: Term -> Set Id
+fvs (TmUnit)           = empty
+fvs (TmTrue)           = empty
+fvs (TmFalse)          = empty
+fvs (TmVar x)          = insert x empty
+fvs (TmProd tm1 tm2)   = union (fvs tm1) (fvs tm2)
+fvs (TmFun x _ tm)     = delete x $ fvs tm
+fvs (TmLet tm1 tm2)    = union (fvs tm1) (fvs tm2)
+fvs (TmIf tm1 tm2 tm3) = union (fvs tm1) $ union (fvs tm2) (fvs tm3)
+fvs (TmFst tm)         = fvs tm
+fvs (TmSnd tm)         = fvs tm
+fvs (TmApp tm1 tm2)    = union (fvs tm1) (fvs tm2)
 
+-- alpha conversion of terms (renaming of variables)
+-- aconv x y tm means change all x to y in tm
+aconv :: Id -> Id -> Term -> Term
+aconv x y (TmUnit)         = TmUnit
+aconv x y (TmTrue)         = TmTrue
+aconv x y (TmFalse)        = TmFalse
+aconv x y (TmVar z)        | x == z    = TmVar y
+                           | otherwise = TmVar z
+aconv x y (TmProd tm1 tm2) = TmProd (aconv x y tm1) (aconv x y tm2)
+aconv x y (TmFun z ty tm)  | x == z    = TmFun y ty (aconv x y tm)
+                           | otherwise = TmFun z ty (aconv x y tm)
+aconv x y (TmLet tm1 tm2)  = TmLet (aconv x y tm1) (aconv x y tm2)
+aconv x y (TmFst tm)       = TmFst (aconv x y tm)
+aconv x y (TmSnd tm)       = TmSnd (aconv x y tm)
+aconv x y (TmApp tm1 tm2)  = TmApp (aconv x y tm1) (aconv x y tm2)
 
--- subst :: Term -> ETerm
+-- Substituted term
+type STerm = Reader [Id] Term
 
--- Evaluated terms (specialized to identifiers)
-type ETerm = Reader [Id] Term
+-- Capture-avoiding sub stitution
+-- s[x/t] means a term s where all x are replaced with t
+subst :: Id -> Term -> Term -> STerm
+subst x t (TmUnit)           = return TmUnit
+subst x t (TmTrue)           = return TmTrue
+subst x t (TmFalse)          = return TmFalse
+subst x t (TmVar y)          | x == y    = return t
+                             | otherwise = return $ TmVar y
+subst x t (TmProd tm1 tm2)   = do tm1' <- subst x t tm1
+                                  tm2' <- subst x t tm2
+                                  return $ TmProd tm1' tm2'
+subst x t s@(TmFun y ty tm)  | x == y           = return $ TmFun y ty tm
+                             | member y (fvs t) = do ids <- ask
+                                                     let z  = head ids
+                                                     let s' = aconv y z s
+                                                     local tail (subst x t s')
+subst x t (TmLet tm1 tm2)    = do tm1' <- subst x t tm1
+                                  tm2' <- subst x t tm2
+                                  return $ TmLet tm1' tm2'
+subst x t (TmIf tm1 tm2 tm3) = do tm1' <- subst x t tm1
+                                  tm2' <- subst x t tm2
+                                  tm3' <- subst x t tm3
+                                  return $ TmIf tm1' tm2' tm3'
+subst x t (TmFst tm)         = do tm' <- subst x t tm
+                                  return $ TmFst tm
+subst x t (TmSnd tm)         = do tm' <- subst x t tm
+                                  return $ TmSnd tm
+subst x t (TmApp tm1 tm2)    = do tm1' <- subst x t tm1
+                                  tm2' <- subst x t tm2
+                                  return $ TmApp tm1' tm2'
 
 -- eval :: Term -> ETerm

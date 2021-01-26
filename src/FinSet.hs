@@ -1,7 +1,6 @@
 {- FinSet.hs
    =========
-   Defines FinSet (category of finite sets) and a denotational semantics from
-   PCF to FinSet. -}
+   Defines the category FinSet. -}
 
 module FinSet where
 

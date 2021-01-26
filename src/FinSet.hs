@@ -9,11 +9,8 @@ import PCF
 import qualified Data.Set as Set
 import Control.Monad (replicateM)
 
-{- ================================= FinSet ================================= -}
 
--- NOTE: Can we use equational reasoning to prove the universal properties?
---       E.g. to check that we've implemented the product and other things
---       correctly?
+{- ================================= FinSet ================================= -}
 
 -- The category FinSet has as objects finite sets, and as morphisms functions
 -- between these sets represented as an exponential object.

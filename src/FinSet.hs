@@ -3,6 +3,8 @@
    Defines FinSet (category of finite sets) and a denotational semantics from
    PCF to FinSet. -}
 
+module FinSet where
+
 import qualified Data.Set as Set
 import Control.Monad (replicateM)
 

@@ -6,7 +6,6 @@
 import qualified Data.Set as Set
 import Control.Monad (replicateM)
 
-
 {- ================================= FinSet ================================= -}
 
 -- The category FinSet has as objects finite sets, and as morphisms functions
@@ -53,6 +52,7 @@ eval fxs = fmap Set.fromList ys
 
 -- Generates all functions between two lists, using first list as domain
 -- and second list as codomain.
--- e.g. functions [1,2] [3,4] => [[],[],[],[]]
+-- e.g. functions [1,2] [3,4]
+--      => [[(1,3),(2,3)],[(1,4),(2,4)],[(1,3),(2,4)],[(1,4),(2,3)]]
 functions :: [a] -> [b] -> [[(a,b)]]
 functions xs ys = [zip xs ys' | ys' <- replicateM (length xs) ys]

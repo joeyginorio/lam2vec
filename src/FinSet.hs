@@ -1,11 +1,8 @@
 {- FinSet.hs
    =========
    Defines FinSet (category of finite sets) and a denotational semantics from
-   PCF to FinSet.
+   PCF to FinSet. -}
 
--}
-
-import PCF
 import qualified Data.Set as Set
 import Control.Monad (replicateM)
 
@@ -40,8 +37,8 @@ terminal :: a -> FinSet a
 terminal = Set.singleton
 
 -- FinSet is also a cartesian closed category, meaning it's equipped with:
--- (v)  Exponentials  :: FinSet a -> FinSet b -> FinSet (Map a b)
--- (vi) Eval morphism :: FinSet ((Map a b), a) -> FinSet b
+-- (v)  Exponentials   :: FinSet a -> FinSet b -> FinSet (Map a b)
+-- (vi) Eval morphism  :: FinSet ((Map a b), a) -> FinSet b
 
 type Map a b = [(a,b)]
 
@@ -50,11 +47,11 @@ expon as bs = Set.fromList $ functions as' bs'
               where as' = Set.toList as
                     bs' = Set.toList bs
 
-apply :: (Ord a, Ord b) => FinSet (Map a b, a) -> Maybe (FinSet b)
-apply fxs = fmap Set.fromList ys
-            where fs = Set.toList . Set.map fst $ fxs
-                  xs = Set.toList . Set.map snd $ fxs
-                  ys = sequence $ zipWith lookup xs fs
+eval :: (Ord a, Ord b) => FinSet (Map a b, a) -> Maybe (FinSet b)
+eval fxs = fmap Set.fromList ys
+             where fs = Set.toList . Set.map fst $ fxs
+                   xs = Set.toList . Set.map snd $ fxs
+                   ys = sequence $ zipWith lookup xs fs
 
 -- Generates all functions between two lists, using first list as domain
 -- and second list as codomain.

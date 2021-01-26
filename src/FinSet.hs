@@ -12,11 +12,9 @@ import Control.Monad (replicateM)
 -- The category FinSet has as objects finite sets, and as morphisms functions
 -- between these sets represented as an exponential object.
 
--- Any inhabitant of FinSet a is an object. Morphisms are represented by
+-- Objects:   Inhabitants of type FinSet a
+-- Morphisms: Exponential objects in FinSet a
 type FinSet a = Set.Set a
-
--- Objects  : inhabitants of FinSet a
--- Morphisms: inhabitants of FinSet a -> FinSet a
 
 -- FinSet is a cartesian category, meaning it's equipped with:
 -- (i)   products         :: FinSet a -> FinSet b -> FinSet (a,b)
